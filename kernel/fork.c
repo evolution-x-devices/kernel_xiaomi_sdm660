@@ -79,6 +79,7 @@
 #include <linux/sysctl.h>
 #include <linux/kcov.h>
 #include <linux/cpufreq_times.h>
+#include <linux/devfreq_boost.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -1727,7 +1728,6 @@ bad_fork_cleanup_audit:
 bad_fork_cleanup_perf:
 	perf_event_free_task(p);
 bad_fork_cleanup_policy:
-	free_task_load_ptrs(p);
 #ifdef CONFIG_NUMA
 	mpol_put(p->mempolicy);
 bad_fork_cleanup_threadgroup_lock:
@@ -1781,6 +1781,10 @@ long _do_fork(unsigned long clone_flags,
 	struct task_struct *p;
 	int trace = 0;
 	long nr;
+
+	/* Boost DDR bus to the max for 50 ms when userspace launches an app */
+	if (task_is_zygote(current))
+		devfreq_boost_kick_max(DEVFREQ_MSM_CPUBW, 50);
 
 	/*
 	 * Determine whether and which event to report to ptracer.  When
